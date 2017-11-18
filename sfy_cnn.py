@@ -5,12 +5,8 @@ import matplotlib.pyplot as plt
 
 from tensorflow.examples.tutorials.mnist import input_data
 
-
-
-MAX_ITER = 20000
+MAX_ITER = 2000
 MAX_TEST = 2000
-
-
 
 ### 定义数据流图对象 ###
 sess = tf.InteractiveSession()
@@ -98,21 +94,18 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 sess.run(tf.global_variables_initializer())  # 初始化全部变量
 
-
-
 # 训练过程
 
-mnist = input_data.read_data_sets('MNIST_data', one_hot=True) # 读取数据集
+mnist = input_data.read_data_sets('MNIST_data', one_hot=True)  # 读取数据集
 
-x_data = [] # 绘图横坐标
-sfy_cross = [] # 代价函数数组
-sfy_sfyin_acc = [] # 训练准确率
-sfy_test_acc = [] # 测试准确率
-
+x_data = []  # 绘图横坐标
+sfy_cross = []  # 代价函数数组
+sfy_train_acc = []  # 训练准确率
+sfy_test_acc = []  # 测试准确率
 
 for i in range(MAX_ITER):
     batch = mnist.train.next_batch(50)
-    test_batch = mnist.test.next_batch(100)
+    test_batch = mnist.test.next_batch(1000)
 
     # print('\n', sess.run(y_prediction, feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1}))
     # print('==============================================')
@@ -123,7 +116,7 @@ for i in range(MAX_ITER):
         x_data.append(i)
         # 计算训练准确率
         step_sfyin_acc = accuracy.eval(feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1.0})
-        sfy_sfyin_acc.append(step_sfyin_acc)
+        sfy_train_acc.append(step_sfyin_acc)
 
         # 计算测试准确率
         step_test_acc = accuracy.eval(feed_dict={x_holder: test_batch[0], y_holder: test_batch[1], drop_prob: 1.0})
@@ -141,21 +134,39 @@ test_batch = mnist.test.next_batch(MAX_TEST)
 print("最终准确率为： %s", accuracy.eval(feed_dict={x_holder: test_batch[0], y_holder: test_batch[1], drop_prob: 1.0}))
 
 # 写入文件
-# 1，保存代价函数数值
 
-np_x_data = np.array(x_data)
+# 读取当前文件运行次数并命名
+num = 0
+n_path = '/简化激活函数/datas/'
+sfy_path = n_path + 'sfy_cnn/'
+with open(n_path + "sfy_n.txt", 'r') as f:
+    ns = f.readline()
+    num = int(ns)
+    print(num)
+
+# 1，保存代价函数数值
+# np_x_data = np.array(x_data)
+
 np_sfy_j_y = np.array(sfy_cross)
-np.savetxt("sfy_j.csv", [np_x_data, sfy_cross], delimiter=',')
+np.savetxt(sfy_path + "sfy_j_" + str(num) + ".csv", [np_sfy_j_y], delimiter=',')
 
 # 2,保存训练过程中的acc
-np_sfy_sfyin_acc = np.array(sfy_cross)
-np.savetxt("sfy_sfyin_acc.csv", [np_x_data, np_sfy_sfyin_acc], delimiter=',')
+np_sfy_train_acc = np.array(sfy_train_acc)
+np_sfy_test_acc = np.array(sfy_test_acc)
+np.savetxt(sfy_path + "sfy_sfyin_acc_" + str(num) + ".csv", [np_sfy_train_acc, np_sfy_test_acc], delimiter=',')
+
+# 更新运行次数，放在最后防止提前写入运行失败
+with open(n_path + "sfy_n.txt", 'w') as f:
+    tmp = num + 1
+    f.write(str(tmp))
 
 # 绘图
 # fig = plt.figure(1)
 # ax = fig.add_subplot(1, 1, 1)
 # plt.plot(x_data, sfy_test_acc)
-plt.title('sfyin accuracy vs test accuracy in sfyining process')
-plt.plot(x_data, sfy_sfyin_acc, x_data, sfy_test_acc)
+plt.title('SReLU function ACC performance')
+plt.plot(x_data, sfy_train_acc, x_data, sfy_test_acc)
 plt.legend(['sfyin_acc', 'test_acc'])
+plt.savefig(sfy_path + "train_vs_test_acc_" + str(num) + ".png")
+
 plt.show()

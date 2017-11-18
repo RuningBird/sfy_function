@@ -5,12 +5,8 @@ import matplotlib.pyplot as plt
 
 from tensorflow.examples.tutorials.mnist import input_data
 
-
-
-MAX_ITER = 20000
+MAX_ITER = 2000
 MAX_TEST = 2000
-
-
 
 ### 定义数据流图对象 ###
 sess = tf.InteractiveSession()
@@ -98,21 +94,18 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 sess.run(tf.global_variables_initializer())  # 初始化全部变量
 
-
-
 # 训练过程
 
-mnist = input_data.read_data_sets('MNIST_data', one_hot=True) # 读取数据集
+mnist = input_data.read_data_sets('MNIST_data', one_hot=True)  # 读取数据集
 
-x_data = [] # 绘图横坐标
-tra_cross = [] # 代价函数数组
-tra_train_acc = [] # 训练准确率
-tra_test_acc = [] # 测试准确率
-
+x_data = []  # 绘图横坐标
+tra_cross = []  # 代价函数数组
+tra_train_acc = []  # 训练准确率
+tra_test_acc = []  # 测试准确率
 
 for i in range(MAX_ITER):
     batch = mnist.train.next_batch(50)
-    test_batch = mnist.test.next_batch(1000)
+    test_batch = mnist.test.next_batch(100)
 
     # print('\n', sess.run(y_prediction, feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1}))
     # print('==============================================')
@@ -141,21 +134,37 @@ test_batch = mnist.test.next_batch(MAX_TEST)
 print("最终准确率为： %s", accuracy.eval(feed_dict={x_holder: test_batch[0], y_holder: test_batch[1], drop_prob: 1.0}))
 
 # 写入文件
-# 1，保存代价函数数值
+# 读取当前文件运行次数并命名
+num = 0
+n_path = '/简化激活函数/datas/'
+tra_path = n_path + 'relu_cnn/'
+with open(n_path + "relu_n.txt", 'r') as f:
+    ns = f.readline()
+    num = int(ns)
+    print(num)
 
-np_x_data = np.array(x_data)
+# 1，保存代价函数数值
+# np_x_data = np.array(x_data)
+
 np_tra_j_y = np.array(tra_cross)
-np.savetxt("tra_j.csv", [np_x_data, tra_cross], delimiter=',')
+np.savetxt(tra_path + "relu_j_" + str(num) + ".csv", tra_cross, delimiter=',')
+# np.savetxt(tra_path + "tra_j_" + str(num) + ".csv", [np_x_data, tra_cross], delimiter=',')
 
 # 2,保存训练过程中的acc
-np_tra_train_acc = np.array(tra_cross)
-np.savetxt("tra_train_acc.csv", [np_x_data, np_tra_train_acc], delimiter=',')
+np_tra_train_acc = np.array(tra_train_acc)
+np_tra_test_acc = np.array(tra_test_acc)
+np.savetxt(tra_path + "relu_train_acc_" + str(num) + ".csv", [np_tra_train_acc, np_tra_test_acc], delimiter=',')
 
+# 更新运行次数，放在最后防止提前写入运行失败
+with open(n_path + "relu_n.txt", 'w') as f:
+    tmp = num + 1
+    f.write(str(tmp))
 # 绘图
 # fig = plt.figure(1)
 # ax = fig.add_subplot(1, 1, 1)
 # plt.plot(x_data, tra_test_acc)
-plt.title('train accuracy vs test accuracy in training process')
+plt.title('ReLU function ACC performance')
 plt.plot(x_data, tra_train_acc, x_data, tra_test_acc)
 plt.legend(['train_acc', 'test_acc'])
+plt.savefig(tra_path + "train_vs_test_acc_" + str(num) + ".png")
 plt.show()
