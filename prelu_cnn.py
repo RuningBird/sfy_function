@@ -45,8 +45,12 @@ x_image = tf.reshape(x_holder, [-1, 28, 28, 1])  # 重整输出数据
 kernel_conv1 = weight_variable([5, 5, 1, 32])  # 32个【5*5 】的卷积核
 bias_conv1 = bias_variable([32])
 
-# h_conv1 = tf.nn.relu(conv2d(x_image, kernel_conv1) + bias_conv1)
-h_conv1 = conv2d(x_image, kernel_conv1) + bias_conv1
+# h_conv1 = tf.nn.relu(conv2d(x_image, kernel_conv1) + bias_conv1) # ReLU
+# h_conv1 = conv2d(x_image, kernel_conv1) + bias_conv1 # SReLU
+# h_conv1 = tf.nn.sigmoid(conv2d(x_image, kernel_conv1)) + bias_conv1 # Sigmoid
+# h_conv1 = tf.nn.tanh(conv2d(x_image, kernel_conv1)) + bias_conv1  # tanh
+
+h_conv1 = 0.1 * tf.nn.relu(conv2d(x_image, kernel_conv1) + bias_conv1)  # PReLU
 h_poo1l = max_pool_2x2(h_conv1)
 ## 此时图像为：32*【14，14】
 
@@ -79,14 +83,14 @@ y_prediction = tf.nn.softmax(tf.matmul(h_dropout, fc2_weight) + fc2_bias)
 
 ### 4.1 定义代价函数：corss | loss
 # cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * tf.log(prediction)))
-
 cross_entropy = -tf.reduce_sum(y_holder * tf.log(y_prediction))
+
 ### 4.2 定义学习（优化）方法 ###
 optimizer = tf.train.AdamOptimizer(1e-4)
-# optimizer = tf.sfyin.GradientDescentOptimizer(0.1)
+# optimizer = tf.train.GradientDescentOptimizer(0.1)
 
 ## 4.3 定义学习（优化）方向 ###
-sfyin_step = optimizer.minimize(cross_entropy)
+train_step = optimizer.minimize(cross_entropy)
 ################################## 5, 评估方法设置#######################################
 correct_prediction = tf.equal(tf.argmax(y_prediction, 1), tf.argmax(y_holder, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -99,32 +103,32 @@ sess.run(tf.global_variables_initializer())  # 初始化全部变量
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)  # 读取数据集
 
 x_data = []  # 绘图横坐标
-sfy_cross = []  # 代价函数数组
-sfy_train_acc = []  # 训练准确率
-sfy_test_acc = []  # 测试准确率
+arr_train_cross = []  # 代价函数数组
+arr_train_acc = []  # 训练准确率
+arr_test_acc = []  # 测试准确率
 
 for i in range(MAX_ITER):
     batch = mnist.train.next_batch(50)
-    test_batch = mnist.test.next_batch(1000)
+    test_batch = mnist.test.next_batch(20)
 
     # print('\n', sess.run(y_prediction, feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1}))
     # print('==============================================')
 
-    sfyin_step.run(feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 0.5})
+    train_step.run(feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 0.5})
 
     if i % 20 == 0:
         x_data.append(i)
         # 计算训练准确率
         step_sfyin_acc = accuracy.eval(feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1.0})
-        sfy_train_acc.append(step_sfyin_acc)
+        arr_train_acc.append(step_sfyin_acc)
 
         # 计算测试准确率
         step_test_acc = accuracy.eval(feed_dict={x_holder: test_batch[0], y_holder: test_batch[1], drop_prob: 1.0})
-        sfy_test_acc.append(step_test_acc)
+        arr_test_acc.append(step_test_acc)
 
         # 计算代价函数
         temp_j = cross_entropy.eval(feed_dict={x_holder: batch[0], y_holder: batch[1], drop_prob: 1.0})
-        sfy_cross.append(temp_j)
+        arr_train_cross.append(temp_j)
         # # print("代价：", temp_j)
 
     if i % 50 == 0:
@@ -137,9 +141,10 @@ print("最终准确率为： %s", accuracy.eval(feed_dict={x_holder: test_batch[
 
 # 读取当前文件运行次数并命名
 num = 0
+train_name = 'prelu'
 n_path = '/简化激活函数/datas/'
-sfy_path = n_path + 'sfy_cnn/'
-with open(n_path + "sfy_n.txt", 'r') as f:
+save_path = n_path + train_name + '_cnn/'
+with open(n_path + train_name + "_n.txt", 'r') as f:
     ns = f.readline()
     num = int(ns)
     print(num)
@@ -147,16 +152,17 @@ with open(n_path + "sfy_n.txt", 'r') as f:
 # 1，保存代价函数数值
 # np_x_data = np.array(x_data)
 
-np_sfy_j_y = np.array(sfy_cross)
-np.savetxt(sfy_path + "sfy_j_" + str(num) + ".csv", [np_sfy_j_y], delimiter=',')
+np_sfy_j_y = np.array(arr_train_cross)
+np.savetxt(save_path + train_name + "_j_" + str(num) + ".csv", [np_sfy_j_y], delimiter=',')
 
 # 2,保存训练过程中的acc
-np_sfy_train_acc = np.array(sfy_train_acc)
-np_sfy_test_acc = np.array(sfy_test_acc)
-np.savetxt(sfy_path + "sfy_train_acc_" + str(num) + ".csv", [np_sfy_train_acc, np_sfy_test_acc], delimiter=',')
+np_sfy_train_acc = np.array(arr_train_acc)
+np_sfy_test_acc = np.array(arr_test_acc)
+np.savetxt(save_path + train_name + "_train_acc_" + str(num) + ".csv", [np_sfy_train_acc, np_sfy_test_acc],
+           delimiter=',')
 
 # 更新运行次数，放在最后防止提前写入运行失败
-with open(n_path + "sfy_n.txt", 'w') as f:
+with open(n_path + train_name + "_n.txt", 'w') as f:
     tmp = num + 1
     f.write(str(tmp))
 
@@ -164,9 +170,9 @@ with open(n_path + "sfy_n.txt", 'w') as f:
 # fig = plt.figure(1)
 # ax = fig.add_subplot(1, 1, 1)
 # plt.plot(x_data, sfy_test_acc)
-plt.title('SReLU function ACC performance')
-plt.plot(x_data, sfy_train_acc, x_data, sfy_test_acc)
-plt.legend(['sfyin_acc', 'test_acc'])
-plt.savefig(sfy_path + "train_vs_test_acc_" + str(num) + ".png")
+plt.title('PReLU function ACC performance')
+plt.plot(x_data, arr_train_acc, x_data, arr_test_acc)
+plt.legend(['train_acc', 'test_acc'])
+plt.savefig(save_path + "train_vs_test_acc_" + str(num) + ".png")
 
 plt.show()
